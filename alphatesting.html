@@ -2108,11 +2108,24 @@ function drawQR(ctx,q,x,y,size){ const n=q.getModuleCount(), s=size/n; ctx.fillS
 const vqrKey=()=>"vqr_"+(CARD_M.noAhli||CARD_M.nama||"").replace(/\W/g,"");
 function vqrSave(){ try{ const o={card:document.getElementById("vqrCard").checked}; ["nama"].concat(VQR_F.map(f=>f.k)).forEach(k=>{ o[k]=document.getElementById("vqv_"+k).value; if(k!=="nama") o["c_"+k]=document.getElementById("vqc_"+k).checked; }); localStorage.setItem(vqrKey(),JSON.stringify(o)); }catch(e){} }
 function vqrLoad(){ try{ return JSON.parse(localStorage.getItem(vqrKey())||"null"); }catch(e){ return null; } }
+function properName(n){
+  const low=/^(bin|binti|bt\.?|b\.?|a\/l|a\/p|@|dan|van|de)$/i;
+  return String(n||"").trim().replace(/\s+/g," ").split(" ").map(w=>{
+    if(low.test(w)) return w.toLowerCase();
+    if(/^dr\.?$/i.test(w)) return "Dr.";
+    return w.toLowerCase().replace(/(^|[-'’(])([a-z])/g,(x,a,b)=>a+b.toUpperCase());
+  }).join(" ");
+}
+const VQR_DEFAULT={title:"Pakar Perubatan Kesihatan Awam"};
 function initVqr(m){
   const S=vqrLoad()||{}, box=document.getElementById("vqrFields"); if(!box) return;
   const note="Ahli "+CONFIG.ORG_SHORT+(m.noAhli?" · No. Ahli "+m.noAhli:"");
+  if(!S.nama||S.nama===m.nama) S.nama=properName(m.nama);
+  Object.keys(VQR_DEFAULT).forEach(k=>{ if(!S[k]) S[k]=VQR_DEFAULT[k]; });
+  if(!S.note) S.note=note;
   box.innerHTML=`<div class="vf"><input type="checkbox" checked disabled><label>Nama (wajib)</label><span></span><input type="text" id="vqv_nama" value="${esc(S.nama||m.nama)}"></div>`+
-    VQR_F.map(f=>`<div class="vf" id="vqw_${f.k}"><input type="checkbox" id="vqc_${f.k}" ${S["c_"+f.k]===false?"":"checked"}><label for="vqc_${f.k}">${f.l}</label><span></span><input type="${f.type}" id="vqv_${f.k}" placeholder="${esc(f.ph)}" value="${esc(S[f.k]!=null?S[f.k]:(f.k==="note"?note:""))}"></div>`).join("");
+    VQR_F.map(f=>`<div class="vf" id="vqw_${f.k}"><input type="checkbox" id="vqc_${f.k}" ${S["c_"+f.k]===false?"":"checked"}><label for="vqc_${f.k}">${f.l}</label><span></span><input type="${f.type}" id="vqv_${f.k}" placeholder="${esc(f.ph)}" value="${esc(S[f.k]||"")}"></div>`).join("")+
+    (["org","tel","email"].some(k=>!S[k])?`<div class="hint" style="margin-top:4px">Sila lengkapkan ruangan yang masih kosong. Maklumat ini akan diingat dalam peranti anda untuk kegunaan seterusnya.</div>`:"");
   document.getElementById("vqrCard").checked=!!S.card;
   const det=document.getElementById("vqr"); const upd=()=>{ vqrRefresh(); vqrSave(); };
   det.addEventListener("input",upd); det.addEventListener("change",upd);
